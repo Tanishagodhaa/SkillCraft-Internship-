@@ -1,0 +1,64 @@
+import pandas as pd
+import plotly.express as px
+import seaborn as sns
+import matplotlib.pyplot as plt
+import streamlit as st
+
+# Load dataset
+file_path = r"C:\Users\admin\Downloads\task1.csv"  # Change this to your actual file path
+df_population = pd.read_csv(file_path, skiprows=4)
+
+# Drop unnecessary columns
+df_population = df_population.drop(columns=["Indicator Name", "Indicator Code"])
+
+# Convert to long format
+df_population_long = df_population.melt(id_vars=["Country Name", "Country Code"],
+                                        var_name="Year", value_name="Population")
+
+# Convert 'Year' to integer
+df_population_long["Year"] = pd.to_numeric(df_population_long["Year"], errors='coerce')
+
+# Filter for 2023 data
+df_2023 = df_population_long[df_population_long["Year"] == 2023].dropna()
+
+# Sort by population and select top 10 countries
+df_2023_sorted = df_2023.sort_values(by="Population", ascending=False).head(10)
+
+# 📌 Streamlit Web App
+st.title("🌍 World Population Analysis Dashboard")
+
+# 🎯 **1️⃣ Interactive Bar Chart - Top 10 Populated Countries (2023)**
+st.subheader("Top 10 Most Populated Countries in 2023")
+fig_bar = px.bar(df_2023_sorted, x="Country Name", y="Population",
+                 title="Top 10 Most Populated Countries in 2023",
+                 labels={"Country Name": "Country", "Population": "Population"},
+                 color="Population",
+                 text_auto=True)
+st.plotly_chart(fig_bar)
+
+# 🎯 **2️⃣ Histogram for Population Distribution**
+st.subheader("Population Distribution of All Countries (2023)")
+plt.figure(figsize=(12, 6))
+sns.histplot(df_2023["Population"], bins=20, kde=True, color="blue")
+plt.xlabel("Population")
+plt.ylabel("Frequency")
+plt.title("Population Distribution of All Countries in 2023")
+st.pyplot(plt)
+
+# 🎯 **3️⃣ Population Trend for a Selected Country**
+st.subheader("📊 Country-Wise Population Trend Analysis")
+country = st.selectbox("Select a country:", df_population_long["Country Name"].unique())
+
+df_country = df_population_long[df_population_long["Country Name"] == country]
+
+if not df_country.empty:
+    fig_trend = px.line(df_country, x="Year", y="Population", markers=True,
+                        title=f"Population Trend of {country}",
+                        labels={"Year": "Year", "Population": "Population"})
+    st.plotly_chart(fig_trend)
+else:
+    st.write("No data available for the selected country.")
+
+# 🎯 **4️⃣ Show Data Table**
+st.subheader("Raw Data Table")
+st.dataframe(df_2023_sorted)
