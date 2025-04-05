@@ -1,0 +1,76 @@
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load Titanic dataset
+file_path = r"C:\Users\admin\Downloads\titanic (1)\train.csv"
+df = pd.read_csv(file_path)
+
+# Data Cleaning
+df["Age"].fillna(df["Age"].median(), inplace=True)
+df["Embarked"].fillna(df["Embarked"].mode()[0], inplace=True)
+df.drop(columns=["Cabin"], inplace=True)
+
+# Feature Engineering
+df["FamilySize"] = df["SibSp"] + df["Parch"] + 1
+df["IsAlone"] = (df["FamilySize"] == 1).astype(int)
+df["FarePerPerson"] = df["Fare"] / df["FamilySize"]
+df["Title"] = df["Name"].str.extract(r" ([A-Za-z]+)\.", expand=False)
+
+# Streamlit UI
+st.set_page_config(page_title="Titanic Data Analysis", page_icon="🚢", layout="wide")
+
+st.title("🚢 Titanic Dataset Analysis")
+st.markdown("An interactive dashboard to explore Titanic passengers and survival rates.")
+
+# Sidebar Filters
+st.sidebar.header("🔍 Filter Data")
+gender_filter = st.sidebar.selectbox("Select Gender", ["All", "Male", "Female"])
+pclass_filter = st.sidebar.multiselect("Select Passenger Class", df["Pclass"].unique(), default=df["Pclass"].unique())
+survival_filter = st.sidebar.selectbox("Survival Status", ["All", "Survived", "Not Survived"])
+
+# Apply Filters
+filtered_df = df.copy()
+if gender_filter != "All":
+    filtered_df = filtered_df[filtered_df["Sex"] == gender_filter.lower()]
+if survival_filter == "Survived":
+    filtered_df = filtered_df[filtered_df["Survived"] == 1]
+elif survival_filter == "Not Survived":
+    filtered_df = filtered_df[filtered_df["Survived"] == 0]
+filtered_df = filtered_df[filtered_df["Pclass"].isin(pclass_filter)]
+
+# Display Data
+st.subheader("📊 Filtered Dataset")
+st.dataframe(filtered_df, use_container_width=True)
+
+# Visualization 1: Survival Count
+st.subheader("📈 Survival Count")
+fig, ax = plt.subplots(figsize=(6, 4))
+sns.countplot(x="Survived", data=filtered_df, palette="coolwarm", ax=ax)
+ax.set_title("Survival Count")
+st.pyplot(fig)
+
+# Visualization 2: Survival by Gender
+st.subheader("👥 Survival Rate by Gender")
+fig, ax = plt.subplots(figsize=(6, 4))
+sns.countplot(x="Sex", hue="Survived", data=filtered_df, palette="Set2", ax=ax)
+ax.set_title("Survival by Gender")
+st.pyplot(fig)
+
+# Visualization 3: Age Distribution
+st.subheader("🎂 Age Distribution")
+fig, ax = plt.subplots(figsize=(8, 4))
+sns.histplot(filtered_df["Age"], bins=30, kde=True, ax=ax)
+ax.set_title("Age Distribution")
+st.pyplot(fig)
+
+# Visualization 4: Survival by Passenger Class
+st.subheader("🎟 Survival by Passenger Class")
+fig, ax = plt.subplots(figsize=(6, 4))
+sns.countplot(x="Pclass", hue="Survived", data=filtered_df, palette="muted", ax=ax)
+ax.set_title("Survival by Passenger Class")
+st.pyplot(fig)
+
+st.success("✅ Data Cleaning & Analysis Completed Successfully!")
+
